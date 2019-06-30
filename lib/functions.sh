@@ -3,9 +3,10 @@
 # FUNCTIONS
 
 # It receives a filename as the first argument and removes all the commentaries
-# (lines preceded by character '#') and empty lines of that file.
+# (lines preceded by character '#') empty lines and all leading witespaces or
+# tabs of that file.
 clean_file(){
-  cat $1 | sed '/^#/d; /^$/d;'
+  cat $1 | sed '/^#/d; /^$/d; s/^[ \t]*//'
 }
 
 # Check if the file has correct syntax, otherwise, it returns a
