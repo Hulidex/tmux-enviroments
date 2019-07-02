@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# VARS
-
-# Note that they are shared to the whole script, so you can use them
-# inside a function, a reuse them outside that function... 
-SESSION=''
-WINDOW=''
-PANE=0
-
 # FUNCTIONS
 
 #It prints a colored error and aborts execution of the script
@@ -39,8 +31,17 @@ split() {
 }
 
 create_session() {
-  tmux new-session -d -c "$1" -s "$2"
-  SESSION="$2"
+  if [ $# -eq 1  ];then
+    NAME=$1
+    tmux new-session -d -s "$NAME"
+  else
+    DIR=$2
+    NAME=$1
+    tmux new-session -d -c "$DIR" -s "$NAME"
+  fi
+
+  # This three variables are used by the whole script and in other functions
+  SESSION="$NAME" # set the current session
   # This line is very important, for more details go to 'create_window' function
   WINDOW=''
 }
@@ -49,23 +50,52 @@ create_window() {
   # When a session is created, a window is created within it, so later on if
   # we want to create a window we have to rename it instead of creating a new one.
   # So if $WINDOW doesn't exist (or is empty), just rename the default window.
-
   if [ -z "$WINDOW" ]; then
-    COMMAND="cd $1 && ${ARRAY[3]}"
-    tmux rename-window -t "$SESSION" "$2"
-    WINDOW="$2"
+    tmux rename-window -t "$SESSION" "$1"
   else
-    tmux new-window -c "$1" -n "$2"  -t "$SESSION"
-    WINDOW="$2"
+    tmux new-window -n "$1"  -t "$SESSION"
   fi
 
-  tmux send-keys -t "$SESSION:$WINDOW" "$COMMAND" ENTER
+  WINDOW="$1" # set the current window
+  PANE=0 #Everytime a window is created we must reset PANE number
+
+  if [ $# -gt 1 ]; then
+    if [ $# -eq 2 ]; then
+      # If just two arguments are passed, we must determinate if  the second
+      # argument it's a path or a command
+      if [ ${2:0:1} = '/' ]; then
+        COMMAND="cd $2"
+      else
+        COMMAND="$2"
+      fi
+    else
+      # Otherwise the second paramater is a path an the third a command
+      COMMAND="cd $2 && $3"
+    fi
+
+    # Execute the command
+    tmux send-keys -t "$SESSION:$WINDOW" "$COMMAND" ENTER
+  fi
 }
 
 create_pane() {
-    COMMAND=${ARRAY[2]}
     SPLIT_OPTION="-${ARRAY[0]:1:1}" # Access the second position of the string contained in ARRAY[0]
-    tmux split-window $SPLIT_OPTION -c "$DIR" -t "${SESSION}:${WINDOW}.${PANE}"
+    tmux split-window $SPLIT_OPTION -t "${SESSION}:${WINDOW}.${PANE}"
     PANE=$(expr $PANE + 1)
-    tmux send-keys -t "${SESSION}:${WINDOW}.${PANE}" "$COMMAND" ENTER
+
+    if [ $# -gt 0 ]; then
+      if [ $# -eq 1 ]; then
+        # If just two arguments are passed, we must determinate if  the second
+        # argument it's a path or a command
+        if [ ${1:0:1} = '/' ]; then
+          COMMAND="cd $1"
+        else
+          COMMAND="$1"
+        fi
+      else
+        COMMAND="cd $1 && $2"
+      fi
+
+      tmux send-keys -t "${SESSION}:${WINDOW}.${PANE}" "$COMMAND" ENTER
+    fi
 }
