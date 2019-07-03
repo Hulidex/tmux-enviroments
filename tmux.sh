@@ -1,8 +1,9 @@
 #!/bin/bash
 
 #USAGE: It creates a tmux environment by using a .tmux.env file
-
-source lib/functions.sh
+LIB="$(dirname $0)/lib/*.sh"
+#source all files under lib/ directory with .sh extension
+for file in $LIB; do source $file; done
 
 # Manage errors:
 if [ ! $# -eq 1 ]; then
